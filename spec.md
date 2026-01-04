@@ -201,3 +201,22 @@ If Azure Cold Starts (>10s) are unacceptable:
     2.  Open the PDF in the browser.
     3.  Verify the table has 50 rows.
     4.  Verify the image is not stretched (Aspect Ratio check).
+
+---
+
+## 10. Workflow & Governance
+**Strict Guidelines for Development:**
+
+### 10.1 GitHub First Logic
+* **Everything is Git:** All changes must be committed and pushed to GitHub.
+* **Tooling:** ALWAYS use the `github` MCP server for interactions (creating issues, PRs, comments).
+
+### 10.2 Branching Strategy
+* **Master/Main:** Protected. Production-ready code only.
+* **Feature Branches:** Create for every new feature (e.g., `feat/image-injection`).
+* **Fix Branches:** Create for bugs (e.g., `fix/template-error`).
+* **Merges:** Performed ONLY after "Visual Verification" or passing unit tests.
+
+### 10.3 Issue Tracking
+* **Bugs:** Must be raised as GitHub Issues before fixing.
+* **Tasks:** Defined in `task.md` but major features should have corresponding GitHub Issues/Projects.
