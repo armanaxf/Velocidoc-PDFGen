@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build outputs
+dist/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+coverage/
+*.pdf
+invoice.pdf
+
+# Logs
+*.log
+npm-debug.log*
+
+# Templates (keep the folder, not generated files)
+# packages/api/templates/*.docx  # Uncomment if templates should be gitignored

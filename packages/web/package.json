@@ -1,0 +1,8 @@
+{
+    "name": "@velocidoc/web",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "echo 'Web UI development not yet implemented' && exit 0"
+    }
+}

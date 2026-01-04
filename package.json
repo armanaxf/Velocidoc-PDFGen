@@ -1,0 +1,17 @@
+{
+  "name": "velocidoc-pdfgen",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --filter @velocidoc/api dev",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5",
+    "officegen": "^0.6.5",
+    "typescript": "^5.0.0"
+  }
+}
