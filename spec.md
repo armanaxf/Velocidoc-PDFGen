@@ -89,12 +89,32 @@ interface UniversalPayload {
 \`\`\`json
 {
   "id": "tpl_12345",
+  "org_id": "org_abc",
   "name": "Service Report",
   "engine": "word", 
-  "source": "path/to/file.docx",
+  "source": "invoice.docx",
   "schema_map": {
     "items.img": { "type": "image", "width": 100, "height": 100 }
   }
+}
+\`\`\`
+
+### 4.3 Storage Architecture (Multi-Tenant)
+The API uses a **pluggable storage layer** to support both self-hosted and SaaS deployments.
+
+| Backend | Use Case | Config |
+|---------|----------|--------|
+| **Local** | Self-hosted, air-gapped, gov/finance | `STORAGE_BACKEND=local` |
+| **Supabase** | SaaS default, quick start | `STORAGE_BACKEND=supabase` |
+| **S3/R2** | Enterprise, compliance | `STORAGE_BACKEND=s3` |
+| **Azure Blob** | Government (Azure Gov Cloud) | `STORAGE_BACKEND=azure` |
+
+\`\`\`typescript
+interface TemplateStorage {
+  list(orgId: string): Promise<Template[]>;
+  get(orgId: string, templateId: string): Promise<Buffer>;
+  put(orgId: string, templateId: string, file: Buffer): Promise<void>;
+  delete(orgId: string, templateId: string): Promise<void>;
 }
 \`\`\`
 
@@ -129,6 +149,14 @@ services:
     image: ghcr.io/yourname/pdf-api:latest
     environment:
       - GOTENBERG_URL=http://gotenberg:3000
+      - STORAGE_BACKEND=local           # 'local', 'supabase', 's3', or 'azure'
+      - TEMPLATES_DIR=/data/templates   # For local storage mode
+      # For multi-tenant SaaS mode:
+      # - STORAGE_BACKEND=supabase
+      # - SUPABASE_URL=https://xxx.supabase.co
+      # - SUPABASE_SERVICE_KEY=xxx
+    volumes:
+      - ./templates:/data/templates     # Mount local templates for self-hosted
     ports:
       - "8080:8080"
     depends_on:
@@ -158,8 +186,9 @@ services:
 * [ ] **Milestone:** Generate an "Inspection Report" PDF with 10 images in a grid.
 
 ### Phase 3: The Integrations (Week 3)
-* [ ] **n8n:** Create \`n8n-nodes-pdf-gen\` package.
-* [ ] **Power Automate:** Create \`openapi.json\` for Custom Connector.
+* [x] **n8n:** Create \`n8n-nodes-pdf-gen\` package.
+* [x] **Power Automate:** Create \`openapi.json\` for Custom Connector.
+* [x] **Multi-Tenancy:** Add pluggable storage layer for SaaS/Self-Hosted deployments.
 * [ ] **Milestone:** A user runs an n8n workflow that calls the API.
 
 ### Phase 4: The Web Builder (Week 4+)
