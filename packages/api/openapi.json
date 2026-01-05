@@ -1,0 +1,213 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Velocidoc PDF Generator API",
+        "description": "Generate PDFs from Word templates with dynamic JSON data. Designed for Power Automate and n8n integrations.",
+        "version": "1.0.0",
+        "contact": {
+            "name": "Velocidoc Support"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://your-api-host.com/v1",
+            "description": "Production Server"
+        },
+        {
+            "url": "http://localhost:3000/v1",
+            "description": "Local Development"
+        }
+    ],
+    "security": [
+        {
+            "ApiKeyAuth": []
+        }
+    ],
+    "paths": {
+        "/generate": {
+            "post": {
+                "operationId": "generateDocument",
+                "summary": "Generate PDF from Template",
+                "description": "Renders a Word template with the provided JSON data and returns a PDF.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UniversalPayload"
+                            },
+                            "example": {
+                                "template_id": "invoice.docx",
+                                "output_format": "pdf",
+                                "data": {
+                                    "customer_name": "Acme Corp",
+                                    "items": [
+                                        {
+                                            "description": "Widget A",
+                                            "price": 10
+                                        },
+                                        {
+                                            "description": "Widget B",
+                                            "price": 20
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Generated document",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Template not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "PDF conversion service unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/templates": {
+            "get": {
+                "operationId": "listTemplates",
+                "summary": "List Available Templates",
+                "description": "Returns a list of available templates. Useful for dynamic dropdowns in Power Automate.",
+                "responses": {
+                    "200": {
+                        "description": "List of templates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TemplateInfo"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key",
+                "description": "API Key for authentication"
+            }
+        },
+        "schemas": {
+            "UniversalPayload": {
+                "type": "object",
+                "required": [
+                    "template_id",
+                    "output_format",
+                    "data"
+                ],
+                "properties": {
+                    "template_id": {
+                        "type": "string",
+                        "description": "Template filename (e.g., 'invoice.docx')"
+                    },
+                    "output_format": {
+                        "type": "string",
+                        "enum": [
+                            "pdf",
+                            "docx"
+                        ],
+                        "description": "Desired output format"
+                    },
+                    "data": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "JSON data to merge into the template"
+                    },
+                    "options": {
+                        "type": "object",
+                        "properties": {
+                            "header_text": {
+                                "type": "string",
+                                "description": "Optional header text"
+                            },
+                            "watermark": {
+                                "type": "boolean",
+                                "description": "Add watermark to output"
+                            }
+                        }
+                    }
+                }
+            },
+            "TemplateInfo": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "required_fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
