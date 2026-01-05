@@ -91,6 +91,23 @@ export const generateRoutes = async (fastify: FastifyInstance) => {
     });
 
     f.get("/templates", async (request, reply) => {
-        return reply.status(200).send([]);
+        // TODO: Extract orgId from auth header (X-API-Key -> lookup)
+        // For now, use 'default' for self-hosted single-tenant mode
+        const orgId = 'default';
+
+        try {
+            const { getStorage } = await import('../storage/index.ts');
+            const storage = getStorage();
+            const templates = await storage.list(orgId);
+
+            return reply.status(200).send(templates.map(t => ({
+                id: t.id,
+                name: t.name,
+                required_fields: [] // TODO: Parse template to extract fields
+            })));
+        } catch (error) {
+            request.log.error({ error }, "Failed to list templates");
+            return reply.status(500).send({ error: "Failed to list templates" });
+        }
     });
 };
