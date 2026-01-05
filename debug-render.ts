@@ -2,24 +2,18 @@ import { DocxService } from "./packages/api/src/services/docx.ts";
 
 const service = new DocxService();
 
-console.log("Attempting to render invoice.docx...");
+console.log("Attempting to render inspection.docx...");
 
 try {
-    const buffer = await service.render("invoice.docx", {
-        company_name: "Debug Corp",
-        invoice_number: "DBG-001",
-        invoice_date: "2026-01-01",
-        due_date: "2026-02-01",
-        client_name: "Debug User",
-        client_email: "debug@test.com",
-        subtotal: 100,
-        tax_amount: 10,
-        total: 110,
-        notes: "Debug Notes",
-        // Adding tax_rate just in case it's in the template
-        tax_rate: 8.25,
-        items: [] // Adding items array just in case
+    const buffer = await service.render("inspection.docx", {
+        items: [
+            { description: "Item 1", photo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" },
+            { description: "Item 2", photo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }
+        ]
     });
+    // Write output to verify
+    const { writeFileSync } = await import("fs");
+    writeFileSync("debug_inspection.docx", buffer);
     console.log("Render successful! Buffer size:", buffer.length);
 } catch (e) {
     console.error("Render failed:", e);

@@ -2,7 +2,7 @@
 shared = "./packages/shared"
 
 [test]
-preload = []
+# preload = []
 
 # Optional: Path mapping if needed by bun specifically
 # But usually tsconfig.json handles this for the LSP and Bun follows it

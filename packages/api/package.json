@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev": "bun --watch src/index.ts",
-        "start": "bun src/index.ts",
+        "start": "tsx src/index.ts",
         "test": "bun test"
     },
     "dependencies": {
@@ -13,7 +13,8 @@
         "fastify": "^5.0.0",
         "fastify-type-provider-zod": "^4.0.0",
         "officegen": "^0.6.5",
-        "zod": "^3.24.0"
+        "zod": "^3.24.0",
+        "tsx": "^4.7.0"
     },
     "devDependencies": {
         "@types/bun": "latest"

@@ -4,17 +4,76 @@
  * Renders DOCX templates with JSON data using Handlebars-style syntax
  */
 
-import createReport from "docx-templates";
+import * as docxTemplates from "docx-templates";
 import { readFile } from "fs/promises";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export class DocxService {
     private templatesDir: string;
+    private createReport: any;
 
     constructor(templatesDir?: string) {
-        // Use import.meta.dir for Bun to get the directory of this file
-        // Then navigate to templates folder relative to src/services/
-        this.templatesDir = templatesDir || resolve(import.meta.dir, "../../templates");
+        // Use Node-compatible path resolution
+        this.templatesDir = templatesDir || resolve(__dirname, "../../templates");
+
+        // Handle CJS/ESM interop for docx-templates
+        // The library may export as default.default, default.createReport, or createReport
+        const mod = docxTemplates as any;
+        if (typeof mod.default === 'function') {
+            this.createReport = mod.default;
+        } else if (mod.default && typeof mod.default.default === 'function') {
+            this.createReport = mod.default.default;
+        } else if (mod.default && typeof mod.default.createReport === 'function') {
+            this.createReport = mod.default.createReport;
+        } else if (typeof mod.createReport === 'function') {
+            this.createReport = mod.createReport;
+        } else {
+            // Fallback - try to use the module itself
+            this.createReport = mod;
+        }
+    }
+
+    /**
+     * Recursive function to detect Base64 image strings and convert them
+     * to docx-templates compatible Image objects.
+     */
+    private processDataForImages(data: any): any {
+        if (!data) return data;
+
+        // specific check for base64 data URI
+        if (typeof data === "string") {
+            // Regex matches: data:image/png;base64,.....
+            const match = data.match(/^data:image\/(png|jpg|jpeg);base64,(.*)$/);
+            if (match) {
+                const extension = `.${match[1]}`;
+                const base64Data = match[2];
+                return {
+                    width: 6, // Default to 6cm, can be adjusted or made configurable later
+                    height: 6,
+                    data: base64Data,
+                    extension: extension,
+                };
+            }
+            return data;
+        }
+
+        if (Array.isArray(data)) {
+            return data.map((item) => this.processDataForImages(item));
+        }
+
+        if (typeof data === "object") {
+            const newData: any = {};
+            for (const key in data) {
+                newData[key] = this.processDataForImages(data[key]);
+            }
+            return newData;
+        }
+
+        return data;
     }
 
     /**
@@ -32,12 +91,14 @@ export class DocxService {
         // Read template file
         const template = await readFile(fullPath);
 
+        // Pre-process data to handle images
+        const processedData = this.processDataForImages(data);
+
         // Render the template with data
-        const result = await createReport({
+        const result = await this.createReport({
             template,
-            data,
+            data: processedData,
             cmdDelimiter: ["{{", "}}"],
-            noSandbox: true,
             failFast: false,
         });
 
@@ -51,11 +112,13 @@ export class DocxService {
      * @returns Promise<Buffer> - The rendered DOCX as a Buffer
      */
     async renderFromBuffer(templateBuffer: Buffer, data: Record<string, any>): Promise<Buffer> {
-        const result = await createReport({
+        // Pre-process data to handle images
+        const processedData = this.processDataForImages(data);
+
+        const result = await this.createReport({
             template: templateBuffer,
-            data,
+            data: processedData,
             cmdDelimiter: ["{{", "}}"],
-            noSandbox: true,
             failFast: false,
         });
 

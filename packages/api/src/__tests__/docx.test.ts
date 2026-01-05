@@ -36,6 +36,29 @@ describe("DocxService", () => {
                 service.render("nonexistent.docx", {})
             ).rejects.toThrow();
         });
+
+        it("processes base64 images correctly", async () => {
+            const imagePayload = {
+                photo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                gallery: [
+                    "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+                    {
+                        title: "Test",
+                        img: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                    }
+                ]
+            };
+
+            // For verification, we inspect the private method by casting to any
+            const processed = (service as any).processDataForImages(imagePayload);
+
+            expect(processed.photo).toHaveProperty("width");
+            expect(processed.photo).toHaveProperty("data");
+            expect(processed.photo.extension).toBe(".png");
+
+            expect(processed.gallery[0].extension).toBe(".jpeg");
+            expect(processed.gallery[1].img.extension).toBe(".png");
+        });
     });
 
     describe("renderFromBuffer", () => {

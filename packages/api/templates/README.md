@@ -1,59 +1,58 @@
-# Sample DOCX Template Instructions
+# Template Requirements for Repeating Rows
 
-To test the PDF generation, you need to create a Word document with Handlebars-style placeholders.
+## The Issue
+When using `officegen` to generate templates, the FOR and END-FOR commands end up in separate XML elements, breaking `docx-templates` parsing.
 
-## Quick Start
+## Solution: Hand-Crafted Templates
+Create templates manually in Microsoft Word with proper syntax.
 
-1. Open Microsoft Word (or Google Docs → download as .docx)
-2. Create a document with the following content:
+## FOR Loop Syntax for docx-templates
 
+In your Word document, use this syntax for repeating content:
+
+### Simple Repeating Text
 ```
-                        INVOICE
-                    
-Company: {{company_name}}
-Invoice #: {{invoice_number}}
-Date: {{invoice_date}}
-Due: {{due_date}}
-
-Bill To:
-{{client_name}}
-{{client_email}}
-{{client_address}}
-
----
-
-Items:
-(For each item in the items array, use docx-templates loop syntax)
-
----
-
-Subtotal: ${{subtotal}}
-Tax ({{tax_rate}}%): ${{tax_amount}}
-TOTAL: ${{total}}
-
-Notes: {{notes}}
+{{FOR item}}
+  Name: {{this.name}}
+  Description: {{this.description}}
+{{END-FOR}}
 ```
 
-3. Save as `invoice.docx` in this folder
+### Repeating Table Rows
+Create a table and in ONE cell, put the FOR loop that spans the entire row logic:
 
-## Handlebars Tags Supported
+| Column 1 | Column 2 |
+|----------|----------|
+| `{{FOR item}}{{this.name}}` | `{{this.value}}{{END-FOR}}` |
 
-- `{{variable}}` - Simple text replacement
-- `{{#each items}}...{{/each}}` - Loop through arrays (Phase 2)
-- `{{#if condition}}...{{/if}}` - Conditional content (Phase 2)
+**Important**: The FOR and END-FOR must be in text runs that `docx-templates` can logically pair.
 
-## Testing
+### With Images
+```
+{{FOR item}}
+  {{this.description}}
+  {{IMAGE this.photo}}
+{{END-FOR}}
+```
 
-Once you have the template:
+## Providing Your Template
 
-```bash
-# Start the API
-cd ../..
-bun run dev:api
+1. Create a `.docx` file in Microsoft Word
+2. Add placeholders using `{{variableName}}` syntax
+3. For loops, use `{{FOR arrayName}}...{{END-FOR}}`
+4. For images, use `{{IMAGE fieldName}}` where the field contains a Base64 data URI
+5. Place the template in `packages/api/templates/`
 
-# In another terminal, with Gotenberg running:
-curl -X POST http://localhost:3000/v1/generate \
-  -H "Content-Type: application/json" \
-  -d @../../test.json \
-  --output invoice.pdf
+## Example Payload for Loops
+```json
+{
+  "template_id": "your-template.docx",
+  "output_format": "pdf",
+  "data": {
+    "items": [
+      { "name": "Item 1", "photo": "data:image/png;base64,..." },
+      { "name": "Item 2", "photo": "data:image/png;base64,..." }
+    ]
+  }
+}
 ```
