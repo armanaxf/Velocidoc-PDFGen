@@ -65,6 +65,11 @@ export class DocxService {
             return data.map((item) => this.processDataForImages(item));
         }
 
+        // Fix for Issue #3: Preserve Date and Buffer objects
+        if (data instanceof Date || (typeof Buffer !== 'undefined' && Buffer.isBuffer(data))) {
+            return data;
+        }
+
         if (typeof data === "object") {
             const newData: any = {};
             for (const key in data) {

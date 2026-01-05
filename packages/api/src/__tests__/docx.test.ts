@@ -58,6 +58,12 @@ describe("DocxService", () => {
 
             expect(processed.gallery[0].extension).toBe(".jpeg");
             expect(processed.gallery[1].img.extension).toBe(".png");
+
+            // Regression test for Issue #3 (Date/Null preservation)
+            const dateData = { date: new Date("2023-01-01"), empty: null };
+            const processedDate = (service as any).processDataForImages(dateData);
+            expect(processedDate.date).toBeInstanceOf(Date);
+            expect(processedDate.empty).toBeNull();
         });
     });
 
