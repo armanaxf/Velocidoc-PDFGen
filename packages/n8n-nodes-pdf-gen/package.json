@@ -1,0 +1,39 @@
+{
+    "name": "n8n-nodes-pdf-gen",
+    "version": "0.1.0",
+    "description": "n8n node for Velocidoc PDF Generator",
+    "keywords": [
+        "n8n-community-node-package",
+        "pdf",
+        "document-generation",
+        "velocidoc"
+    ],
+    "license": "MIT",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc && npx n8n-node-dev build",
+        "dev": "tsc --watch",
+        "lint": "eslint nodes credentials --ext .ts",
+        "prepublish": "npm run build"
+    },
+    "files": [
+        "dist"
+    ],
+    "n8n": {
+        "n8nNodesApiVersion": 1,
+        "credentials": [
+            "dist/credentials/VelocidocApi.credentials.js"
+        ],
+        "nodes": [
+            "dist/nodes/VelocidocPdfGen/VelocidocPdfGen.node.js"
+        ]
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "n8n-workflow": "^1.0.0",
+        "typescript": "^5.0.0"
+    },
+    "peerDependencies": {
+        "n8n-workflow": "*"
+    }
+}
