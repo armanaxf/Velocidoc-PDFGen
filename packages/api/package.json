@@ -8,6 +8,9 @@
         "test": "bun test"
     },
     "dependencies": {
+        "@fastify/cors": "^11.2.0",
+        "@fastify/helmet": "^13.0.2",
+        "@fastify/rate-limit": "^10.3.0",
         "@velocidoc/shared": "workspace:*",
         "docx-templates": "^4.13.0",
         "fastify": "^5.0.0",
