@@ -9,13 +9,15 @@ export interface InlineTemplate {
 
 /**
  * Universal payload for document generation
- * Supports two modes:
+ * Supports three modes (provide exactly one):
  * 1. Server-stored template: use `template_id`
- * 2. BYOT (Bring Your Own Template): use `template` object
+ * 2. BYOT (Bring Your Own Template): use `template` object with base64 content
+ * 3. Remote template: use `template_url` to fetch from SharePoint/OneDrive/S3/etc.
  */
 export interface UniversalPayload {
     template_id?: string;          // Reference to server-stored template
     template?: InlineTemplate;     // Inline template content (BYOT)
+    template_url?: string;         // URL to fetch template from (SharePoint, OneDrive, S3, etc.)
     output_format: "pdf" | "docx" | "html";
     data: Record<string, any>;     // The user's JSON data
     options?: {

@@ -52,7 +52,7 @@
                                     }
                                 },
                                 "byot": {
-                                    "summary": "BYOT - Bring Your Own Template (from SharePoint)",
+                                    "summary": "BYOT - Bring Your Own Template (inline base64)",
                                     "value": {
                                         "template": {
                                             "content": "UEsDBBQAAAAI... (base64-encoded DOCX)",
@@ -61,6 +61,19 @@
                                         "output_format": "pdf",
                                         "data": {
                                             "customer_name": "Acme Corp"
+                                        }
+                                    }
+                                },
+                                "template_url": {
+                                    "summary": "Remote template from SharePoint/OneDrive/S3 URL",
+                                    "value": {
+                                        "template_url": "https://mycompany.sharepoint.com/sites/templates/Shared%20Documents/invoice.docx?share=abc123",
+                                        "output_format": "pdf",
+                                        "data": {
+                                            "customer_name": "Acme Corp",
+                                            "items": [
+                                                { "description": "Consulting", "price": 500 }
+                                            ]
                                         }
                                     }
                                 }
@@ -205,7 +218,7 @@
             },
             "UniversalPayload": {
                 "type": "object",
-                "description": "Supports two modes: (1) template_id for server-stored templates, (2) template for BYOT. Provide one or the other, not both.",
+                "description": "Supports three modes (provide exactly one): (1) template_id for server-stored templates, (2) template for BYOT with base64 content, (3) template_url to fetch from SharePoint/OneDrive/S3/etc.",
                 "required": [
                     "output_format",
                     "data"
@@ -213,10 +226,15 @@
                 "properties": {
                     "template_id": {
                         "type": "string",
-                        "description": "Server-stored template filename (e.g., 'invoice.docx'). Use this OR template, not both."
+                        "description": "Server-stored template filename (e.g., 'invoice.docx')"
                     },
                     "template": {
                         "$ref": "#/components/schemas/InlineTemplate"
+                    },
+                    "template_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "URL to fetch template from (SharePoint sharing link, OneDrive, S3 pre-signed URL, or any public URL)"
                     },
                     "output_format": {
                         "type": "string",

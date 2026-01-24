@@ -12,10 +12,11 @@ const InlineTemplateSchema = z.object({
 });
 
 // Zod schema matching UniversalPayload interface
-// Supports both template_id (server-stored) and template (BYOT)
+// Supports three modes: template_id (server-stored), template (BYOT), or template_url (remote)
 const UniversalPayloadSchema = z.object({
     template_id: z.string().optional(),
     template: InlineTemplateSchema.optional(),
+    template_url: z.string().url("Invalid URL format").optional(),
     output_format: z.enum(["pdf", "docx", "html"]),
     data: z.record(z.any()),
     options: z.object({
@@ -24,11 +25,14 @@ const UniversalPayloadSchema = z.object({
         metadata: z.record(z.string()).optional(),
     }).optional(),
 }).refine(
-    (data) => data.template_id || data.template,
-    { message: "Either template_id or template must be provided" }
+    (data) => data.template_id || data.template || data.template_url,
+    { message: "One of template_id, template, or template_url must be provided" }
 ).refine(
-    (data) => !(data.template_id && data.template),
-    { message: "Provide either template_id or template, not both" }
+    (data) => {
+        const count = [data.template_id, data.template, data.template_url].filter(Boolean).length;
+        return count === 1;
+    },
+    { message: "Provide exactly one of: template_id, template, or template_url" }
 );
 
 // Schema for template validation endpoint
@@ -55,23 +59,37 @@ export const generateRoutes = async (fastify: FastifyInstance) => {
         },
     }, async (request, reply) => {
         const payload = request.body;
-        const isBYOT = !!payload.template;
-        const templateName = isBYOT ? payload.template!.filename : payload.template_id!;
+
+        // Determine template mode and name
+        const mode = payload.template ? 'BYOT' : payload.template_url ? 'URL' : 'stored';
+        const templateName = payload.template?.filename
+            || (payload.template_url ? extractFilenameFromUrl(payload.template_url) : payload.template_id!);
 
         request.log.info({
             template: templateName,
-            mode: isBYOT ? 'BYOT' : 'stored'
+            mode,
+            ...(payload.template_url && { url: payload.template_url })
         }, "Received generation request");
 
         try {
             let renderedDocx: Buffer;
+            let templateBuffer: Buffer;
 
-            if (isBYOT) {
-                // BYOT Mode: Decode base64 and render from buffer
-                const templateBuffer = Buffer.from(payload.template!.content, 'base64');
+            if (payload.template) {
+                // BYOT Mode: Decode base64
+                templateBuffer = Buffer.from(payload.template.content, 'base64');
+            } else if (payload.template_url) {
+                // URL Mode: Fetch template from remote URL
+                templateBuffer = await fetchTemplateFromUrl(payload.template_url, request.log);
+            } else {
+                // Stored template mode: Render from file directly
+                renderedDocx = await docxService.render(payload.template_id!, payload.data);
+            }
 
+            // For BYOT and URL modes, validate and render from buffer
+            if (payload.template || payload.template_url) {
                 // Validate it's a valid DOCX before processing
-                const validation = await validateDocx(templateBuffer);
+                const validation = await validateDocx(templateBuffer!);
                 if (!validation.valid) {
                     return reply.status(400).send({
                         error: "Invalid template file",
@@ -79,10 +97,7 @@ export const generateRoutes = async (fastify: FastifyInstance) => {
                     });
                 }
 
-                renderedDocx = await docxService.renderFromBuffer(templateBuffer, payload.data);
-            } else {
-                // Stored template mode: Render from file
-                renderedDocx = await docxService.render(payload.template_id!, payload.data);
+                renderedDocx = await docxService.renderFromBuffer(templateBuffer!, payload.data);
             }
 
             request.log.info("Template rendered successfully");
@@ -128,6 +143,13 @@ export const generateRoutes = async (fastify: FastifyInstance) => {
                 if (error.message.includes("base64") || error.message.includes("Invalid")) {
                     return reply.status(400).send({
                         error: "Invalid template content",
+                        details: error.message,
+                    });
+                }
+                // Handle URL fetch errors
+                if (error.message.includes("Failed to fetch template") || error.message.includes("fetch")) {
+                    return reply.status(502).send({
+                        error: "Failed to fetch template from URL",
                         details: error.message,
                     });
                 }
@@ -242,4 +264,97 @@ function flattenKeys(obj: Record<string, any>, prefix = ''): string[] {
         }
     }
     return keys;
+}
+
+/**
+ * Extract filename from URL, handling various URL formats
+ * - SharePoint: .../Documents/invoice.docx?share=...
+ * - OneDrive: .../download.aspx?file=invoice.docx
+ * - S3: .../bucket/path/invoice.docx?X-Amz-...
+ * - Direct: .../invoice.docx
+ */
+function extractFilenameFromUrl(url: string): string {
+    try {
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+
+        // Try to extract filename from pathname
+        const pathParts = pathname.split('/').filter(Boolean);
+        const lastPart = pathParts[pathParts.length - 1];
+
+        // Check if last part looks like a filename
+        if (lastPart && lastPart.includes('.')) {
+            // Decode URI component and remove any query-like suffixes
+            return decodeURIComponent(lastPart.split('?')[0]);
+        }
+
+        // Check query params for file parameter (OneDrive style)
+        const fileParam = urlObj.searchParams.get('file') || urlObj.searchParams.get('filename');
+        if (fileParam) {
+            return decodeURIComponent(fileParam);
+        }
+
+        // Fallback to generic name
+        return 'template.docx';
+    } catch {
+        return 'template.docx';
+    }
+}
+
+/**
+ * Fetch template from a remote URL
+ * Supports: SharePoint sharing links, OneDrive, S3 pre-signed URLs, public URLs
+ */
+async function fetchTemplateFromUrl(url: string, log: any): Promise<Buffer> {
+    const TIMEOUT_MS = 30000; // 30 second timeout
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB max template size
+
+    log.info({ url }, "Fetching template from URL");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            signal: controller.signal,
+            headers: {
+                'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/octet-stream, */*',
+                'User-Agent': 'Velocidoc-PDFGen/1.0',
+            },
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch template: HTTP ${response.status} ${response.statusText}`);
+        }
+
+        // Check content length if available
+        const contentLength = response.headers.get('content-length');
+        if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+            throw new Error(`Template file too large: ${contentLength} bytes (max ${MAX_SIZE})`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        if (arrayBuffer.byteLength > MAX_SIZE) {
+            throw new Error(`Template file too large: ${arrayBuffer.byteLength} bytes (max ${MAX_SIZE})`);
+        }
+
+        log.info({ size: arrayBuffer.byteLength }, "Template fetched successfully");
+
+        return Buffer.from(arrayBuffer);
+
+    } catch (error) {
+        clearTimeout(timeoutId);
+
+        if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+                throw new Error(`Failed to fetch template: Request timed out after ${TIMEOUT_MS}ms`);
+            }
+            throw new Error(`Failed to fetch template from URL: ${error.message}`);
+        }
+        throw new Error(`Failed to fetch template from URL: ${String(error)}`);
+    }
 }
