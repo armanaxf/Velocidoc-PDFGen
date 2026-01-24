@@ -102,4 +102,106 @@ describe("API Routes", () => {
             expect(response.json()).toEqual([]);
         });
     });
+
+    describe("POST /v1/generate - BYOT mode", () => {
+        it("returns 400 when neither template_id nor template provided", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/generate",
+                payload: {
+                    output_format: "pdf",
+                    data: { name: "Test" },
+                },
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(400);
+        });
+
+        it("returns 400 when both template_id and template provided", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/generate",
+                payload: {
+                    template_id: "test.docx",
+                    template: {
+                        content: "dGVzdA==",  // "test" in base64
+                        filename: "test.docx",
+                    },
+                    output_format: "pdf",
+                    data: { name: "Test" },
+                },
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(400);
+        });
+
+        it("returns 400 when template content is invalid (not a DOCX)", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/generate",
+                payload: {
+                    template: {
+                        content: "dGVzdA==",  // "test" in base64 - not a valid DOCX
+                        filename: "test.docx",
+                    },
+                    output_format: "pdf",
+                    data: { name: "Test" },
+                },
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(400);
+            const body = response.json();
+            expect(body.error).toBe("Invalid template file");
+        });
+
+        it("returns 400 when template.filename is missing", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/generate",
+                payload: {
+                    template: {
+                        content: "dGVzdA==",
+                    },
+                    output_format: "pdf",
+                    data: { name: "Test" },
+                },
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(400);
+        });
+    });
+
+    describe("POST /v1/templates/validate", () => {
+        it("returns invalid for non-DOCX content", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/templates/validate",
+                payload: {
+                    content: "dGVzdA==",  // "test" in base64 - not a valid DOCX
+                },
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(200);
+            const body = response.json();
+            expect(body.valid).toBe(false);
+            expect(body.errors).toBeDefined();
+            expect(body.errors.length).toBeGreaterThan(0);
+        });
+
+        it("returns 400 when content is missing", async () => {
+            const response = await server.inject({
+                method: "POST",
+                url: "/v1/templates/validate",
+                payload: {},
+                headers: { "Content-Type": "application/json" },
+            });
+
+            expect(response.statusCode).toBe(400);
+        });
+    });
 });

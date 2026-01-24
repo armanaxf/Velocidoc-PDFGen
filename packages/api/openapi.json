@@ -36,21 +36,33 @@
                             "schema": {
                                 "$ref": "#/components/schemas/UniversalPayload"
                             },
-                            "example": {
-                                "template_id": "invoice.docx",
-                                "output_format": "pdf",
-                                "data": {
-                                    "customer_name": "Acme Corp",
-                                    "items": [
-                                        {
-                                            "description": "Widget A",
-                                            "price": 10
-                                        },
-                                        {
-                                            "description": "Widget B",
-                                            "price": 20
+                            "examples": {
+                                "stored_template": {
+                                    "summary": "Using a server-stored template",
+                                    "value": {
+                                        "template_id": "invoice.docx",
+                                        "output_format": "pdf",
+                                        "data": {
+                                            "customer_name": "Acme Corp",
+                                            "items": [
+                                                { "description": "Widget A", "price": 10 },
+                                                { "description": "Widget B", "price": 20 }
+                                            ]
                                         }
-                                    ]
+                                    }
+                                },
+                                "byot": {
+                                    "summary": "BYOT - Bring Your Own Template (from SharePoint)",
+                                    "value": {
+                                        "template": {
+                                            "content": "UEsDBBQAAAAI... (base64-encoded DOCX)",
+                                            "filename": "my-template.docx"
+                                        },
+                                        "output_format": "pdf",
+                                        "data": {
+                                            "customer_name": "Acme Corp"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -107,6 +119,41 @@
                 }
             }
         },
+        "/templates/validate": {
+            "post": {
+                "operationId": "validateTemplate",
+                "summary": "Validate Template",
+                "description": "Validates a DOCX template and extracts placeholder fields. Use this before generation to catch errors and discover required data fields.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ValidateTemplateRequest"
+                            },
+                            "example": {
+                                "content": "UEsDBBQAAAAI... (base64-encoded DOCX)",
+                                "data": {
+                                    "customer_name": "Test"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Validation result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidateTemplateResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/templates": {
             "get": {
                 "operationId": "listTemplates",
@@ -140,17 +187,36 @@
             }
         },
         "schemas": {
+            "InlineTemplate": {
+                "type": "object",
+                "description": "Inline template for BYOT (Bring Your Own Template) - pass template directly from SharePoint/OneDrive",
+                "required": ["content", "filename"],
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "format": "byte",
+                        "description": "Base64-encoded DOCX file content"
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Original filename (e.g., 'invoice.docx')"
+                    }
+                }
+            },
             "UniversalPayload": {
                 "type": "object",
+                "description": "Supports two modes: (1) template_id for server-stored templates, (2) template for BYOT. Provide one or the other, not both.",
                 "required": [
-                    "template_id",
                     "output_format",
                     "data"
                 ],
                 "properties": {
                     "template_id": {
                         "type": "string",
-                        "description": "Template filename (e.g., 'invoice.docx')"
+                        "description": "Server-stored template filename (e.g., 'invoice.docx'). Use this OR template, not both."
+                    },
+                    "template": {
+                        "$ref": "#/components/schemas/InlineTemplate"
                     },
                     "output_format": {
                         "type": "string",
@@ -177,6 +243,46 @@
                                 "description": "Add watermark to output"
                             }
                         }
+                    }
+                }
+            },
+            "ValidateTemplateRequest": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "format": "byte",
+                        "description": "Base64-encoded DOCX template content"
+                    },
+                    "data": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Optional sample data to validate against"
+                    }
+                }
+            },
+            "ValidateTemplateResponse": {
+                "type": "object",
+                "properties": {
+                    "valid": {
+                        "type": "boolean",
+                        "description": "Whether the template is valid"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Extracted placeholder field names"
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Validation errors (if invalid)"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Non-fatal warnings"
                     }
                 }
             },
