@@ -2,6 +2,9 @@ import { describe, it, expect, beforeAll, afterAll, mock } from "bun:test";
 import { buildServer } from "../server.ts";
 import type { FastifyInstance } from "fastify";
 
+// Disable auth for tests
+process.env.AUTH_ENABLED = 'false';
+
 describe("API Routes", () => {
     let server: FastifyInstance;
 
