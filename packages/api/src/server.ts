@@ -4,6 +4,7 @@ import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { generateRoutes } from "./routes/generate.ts";
+import { registerAuth } from "./middleware/auth.ts";
 
 export const buildServer = async () => {
     const server = Fastify({
@@ -37,6 +38,9 @@ export const buildServer = async () => {
             retryAfter: context.after,
         }),
     });
+
+    // API Key authentication
+    await registerAuth(server);
 
     // Register routes
     await server.register(generateRoutes, { prefix: "/v1" });
