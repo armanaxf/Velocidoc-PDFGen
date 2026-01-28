@@ -181,9 +181,9 @@ services:
 * [x] **Milestone:** \`curl\` command sends JSON and gets a PDF back.
 
 ### Phase 2: Image Injection (Week 2)
-* [ ] Implement "Base64 detection" logic in \`DocxService\`.
-* [ ] Create "Repeating Row" logic for tables with images.
-* [ ] **Milestone:** Generate an "Inspection Report" PDF with 10 images in a grid.
+* [x] Implement "Base64 detection" logic in \`DocxService\`.
+* [x] Create "Repeating Row" logic for tables with images.
+* [x] **Milestone:** Generate an "Inspection Report" PDF with 10 images in a grid.
 
 ### Phase 3: The Integrations (Week 3)
 * [x] **n8n:** Create \`n8n-nodes-pdf-gen\` package.
@@ -191,10 +191,9 @@ services:
 * [x] **Multi-Tenancy:** Add pluggable storage layer for SaaS/Self-Hosted deployments.
 * [ ] **Milestone:** A user runs an n8n workflow that calls the API.
 
-### Phase 4: The Web Builder (Week 4+)
-* [ ] Create \`packages/web\`: React + Tailwind.
-* [ ] Build "JSON-to-HTML" renderer.
-* [ ] **Milestone:** User drags a "Text" block, types \`{{name}}\`, and the API renders it.
+### Phase 4: ~~The Web Builder~~ (DESCOPED)
+> **Note:** Phase 4 has been descoped. The Velocidoc Word Add-in supersedes the web builder,
+> providing a more integrated template authoring experience directly in Microsoft Word.
 
 ---
 
