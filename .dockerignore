@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+.bun
+
+# Git
+.git
+.gitignore
+
+# Test files
+*.test.ts
+__tests__
+
+# Local env files
+.env
+.env.*
+
+# Build artifacts
+dist
+*.log
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+*.pdf
+test-*.json
